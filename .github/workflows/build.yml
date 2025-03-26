@@ -36,11 +36,7 @@ jobs:
           cp -f dist/_worker.js build/unobfuscated-worker.js
           zip -j build/unobfuscated-worker.zip dist/_worker.js
 
-      - name: Obfuscate JS
-        run: |
-          npx javascript-obfuscator --config ./obfs-config.json dist/_worker.js --output _worker.js
-          cp -f _worker.js build/worker.js
-          zip -j build/worker.zip _worker.js
+
 
       - name: Commit and push built worker
         run: |
