@@ -18,13 +18,10 @@ jobs:
         id: get_version
         run: echo "RELEASE_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
 
-      - name: Check release version
-        run: echo "Release version is $RELEASE_VERSION"
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "latest"
+          node-version: "20"  # 或者 latest
 
       - name: Install dependencies
         run: npm install
@@ -40,7 +37,7 @@ jobs:
           r="${r//'%'/'%25'}"                               
           r="${r//$'\n'/'%0A'}"                             
           r="${r//$'\r'/'%0D'}"                             
-          echo "RELEASE_BODY=$r" >> $GITHUB_OUTPUT          
+          echo "RELEASE_BODY=$r" >> $GITHUB_OUTPUT
 
       - name: Upload Release Assets
         uses: svenstaro/upload-release-action@v2
