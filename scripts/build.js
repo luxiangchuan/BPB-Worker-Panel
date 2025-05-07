@@ -6,7 +6,6 @@ import { sync } from 'glob';
 import { minify as jsMinify } from 'terser';
 import { minify as htmlMinify } from 'html-minifier';
 import JSZip from "jszip";
-//import obfs from 'javascript-obfuscator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = pathDirname(__filename);
@@ -40,14 +39,13 @@ async function processHtmlPages() {
         result[dir] = JSON.stringify(minifiedHtml);
     }
 
-    console.log('✅ Assets bundled successfuly!');
+    console.log('✅ Assets bundled successfully!');
     return result;
 }
 
 async function buildWorker() {
-
     const htmls = await processHtmlPages();
-    const faviconBuffer = readFileSync('./src/assets/favicon.ico');
+    const faviconBuffer = readFileSync(join(ASSET_PATH, 'favicon.ico'));
     const faviconBase64 = faviconBuffer.toString('base64');
 
     const code = await build({
@@ -66,8 +64,8 @@ async function buildWorker() {
             __ICON__: JSON.stringify(faviconBase64)
         }
     });
-    
-    console.log('✅ Worker built successfuly!');
+
+    console.log('✅ Worker built successfully!');
 
     const minifiedCode = await jsMinify(code.outputFiles[0].text, {
         module: true,
@@ -76,41 +74,24 @@ async function buildWorker() {
         }
     });
 
-    console.log('✅ Worker minified successfuly!');
+    console.log('✅ Worker minified successfully!');
 
-    /* const obfuscationResult = obfs.obfuscate(minifiedCode.code, {
-        stringArrayThreshold: 1,
-        stringArrayEncoding: [
-            "rc4"
-        ],
-        numbersToExpressions: true,
-        transformObjectKeys: true,
-        renameGlobals: true,
-        deadCodeInjection: true,
-        deadCodeInjectionThreshold: 0.2,
-        target: "browser"
-    });
-
-    const finalCode = obfuscationResult.getObfuscatedCode();
-    const worker = `// @ts-nocheck\n${finalCode}`;
-    */
     const worker = minifiedCode.code;
-    console.log('✅ Worker obfuscated successfuly!');
 
     mkdirSync(DIST_PATH, { recursive: true });
-    writeFileSync('./dist/worker.js', worker, 'utf8');
+    writeFileSync(join(DIST_PATH, 'worker.js'), worker, 'utf8');
 
     const zip = new JSZip();
     zip.file('_worker.js', worker);
     zip.generateAsync({
         type: 'nodebuffer',
         compression: 'DEFLATE'
-    }).then(nodebuffer => writeFileSync('./dist/worker.zip', nodebuffer));
+    }).then(nodebuffer => writeFileSync(join(DIST_PATH, 'worker.zip'), nodebuffer));
 
-    console.log('✅ Worker files published successfuly!');
+    console.log('✅ Worker files published successfully!');
 }
 
 buildWorker().catch(err => {
-    console.error('❌ Build failed:', err);
+    console.error('❌ Build failed:', err.stack || err);
     process.exit(1);
 });
