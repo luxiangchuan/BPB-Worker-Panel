@@ -6,7 +6,7 @@ import { sync } from 'glob';
 import { minify as jsMinify } from 'terser';
 import { minify as htmlMinify } from 'html-minifier';
 import JSZip from "jszip";
-import obfs from 'javascript-obfuscator';
+//import obfs from 'javascript-obfuscator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = pathDirname(__filename);
@@ -78,7 +78,7 @@ async function buildWorker() {
 
     console.log('✅ Worker minified successfuly!');
 
-    const obfuscationResult = obfs.obfuscate(minifiedCode.code, {
+    /* const obfuscationResult = obfs.obfuscate(minifiedCode.code, {
         stringArrayThreshold: 1,
         stringArrayEncoding: [
             "rc4"
@@ -93,7 +93,8 @@ async function buildWorker() {
 
     const finalCode = obfuscationResult.getObfuscatedCode();
     const worker = `// @ts-nocheck\n${finalCode}`;
-    
+    */
+    const worker = minifiedCode.code;
     console.log('✅ Worker obfuscated successfuly!');
 
     mkdirSync(DIST_PATH, { recursive: true });
