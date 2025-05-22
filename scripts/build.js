@@ -3,9 +3,9 @@ import { join, dirname as pathDirname } from 'path';
 import { fileURLToPath } from 'url';
 import { build } from 'esbuild';
 import { sync } from 'glob';
-import { minify as jsMinify } from 'terser';
-import { minify as htmlMinify } from 'html-minifier';
+import { minify } from 'html-minifier';
 import JSZip from "jszip";
+const version = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = pathDirname(__filename);
@@ -25,15 +25,16 @@ async function processHtmlPages() {
         const styleCode = readFileSync(base('style.css'), 'utf8');
         const scriptCode = readFileSync(base('script.js'), 'utf8');
 
-        const finalScriptCode = await jsMinify(scriptCode);
         const finalHtml = indexHtml
             .replace(/__STYLE__/g, `<style>${styleCode}</style>`)
-            .replace(/__SCRIPT__/g, finalScriptCode.code);
+            .replace(/__SCRIPT__/g, scriptCode)
+            .replace(/__PANEL_VERSION__/g, version);
 
-        const minifiedHtml = htmlMinify(finalHtml, {
+        const minifiedHtml = minify(finalHtml, {
             collapseWhitespace: true,
             removeAttributeQuotes: true,
-            minifyCSS: true
+            minifyCSS: true,
+            minifyJS: true
         });
 
         result[dir] = JSON.stringify(minifiedHtml);
