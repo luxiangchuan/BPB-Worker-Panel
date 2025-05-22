@@ -3,9 +3,7 @@ import { join, dirname as pathDirname } from 'path';
 import { fileURLToPath } from 'url';
 import { build } from 'esbuild';
 import { sync } from 'glob';
-import { minify } from 'html-minifier';
-import JSZip from "jszip";
-const version = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version;
+import JSZip from 'jszip';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = pathDirname(__filename);
@@ -25,22 +23,20 @@ async function processHtmlPages() {
         const styleCode = readFileSync(base('style.css'), 'utf8');
         const scriptCode = readFileSync(base('script.js'), 'utf8');
 
+        // 不压缩 JS
+        const finalScriptCode = { code: scriptCode };
+
         const finalHtml = indexHtml
             .replace(/__STYLE__/g, `<style>${styleCode}</style>`)
-            .replace(/__SCRIPT__/g, scriptCode)
-            .replace(/__PANEL_VERSION__/g, version);
+            .replace(/__SCRIPT__/g, finalScriptCode.code);
 
-        const minifiedHtml = minify(finalHtml, {
-            collapseWhitespace: true,
-            removeAttributeQuotes: true,
-            minifyCSS: true,
-            minifyJS: true
-        });
+        // 不压缩 HTML
+        const minifiedHtml = finalHtml;
 
         result[dir] = JSON.stringify(minifiedHtml);
     }
 
-    console.log('✅ Assets bundled successfuly!');
+    console.log('✅ Assets bundled successfully!');
     return result;
 }
 
@@ -66,18 +62,16 @@ async function buildWorker() {
         }
     });
 
-    console.log('✅ Worker built successfuly!');
+    console.log('✅ Worker built successfully!');
 
-    const minifiedCode = await jsMinify(code.outputFiles[0].text, {
-        module: true,
-        output: {
-            comments: false
-        }
-    });
+    // 不压缩代码
+    const minifiedCode = { code: code.outputFiles[0].text };
 
-    console.log('✅ Worker minified successfuly!');
+    // 不混淆代码
+    const finalCode = minifiedCode.code;
+    const worker = `// @ts-nocheck\n${finalCode}`;
 
-    const worker = `// @ts-nocheck\n${minifiedCode.code}`;
+    console.log('✅ Worker finalized (no compression/obfuscation)!');
 
     mkdirSync(DIST_PATH, { recursive: true });
     writeFileSync('./dist/worker.js', worker, 'utf8');
