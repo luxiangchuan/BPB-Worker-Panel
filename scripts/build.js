@@ -73,15 +73,15 @@ async function buildWorker() {
     console.log('✅ Worker built successfuly!');
 
     let finalCode;
-    if (devMode) {
+    //if (devMode) {
         finalCode = code.outputFiles[0].text;
-    } else {
-        const minifiedCode = await jsMinify(code.outputFiles[0].text, {
-            module: true,
-            output: {
-                comments: false
-            }
-        });
+    //} else {
+     //   const minifiedCode = await jsMinify(code.outputFiles[0].text, {
+     //       module: true,
+     //       output: {
+     //           comments: false
+     //       }
+      //  });
     
         console.log('✅ Worker minified successfuly!');
     
