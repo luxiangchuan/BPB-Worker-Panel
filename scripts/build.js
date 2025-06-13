@@ -34,12 +34,13 @@ async function processHtmlPages() {
             .replace(/__STYLE__/g, `<style>${styleCode}</style>`)
             .replace(/__SCRIPT__/g, finalScriptCode.code);
 
-        const minifiedHtml = htmlMinify(finalHtml, {
+        const minifiedHtml = finalHtml;
+        /* const minifiedHtml = htmlMinify(finalHtml, {
             collapseWhitespace: true,
             removeAttributeQuotes: true,
             minifyCSS: true
         });
-
+*/
         result[dir] = JSON.stringify(minifiedHtml);
     }
 
@@ -75,13 +76,13 @@ async function buildWorker() {
     let finalCode;
     //if (devMode) {
         finalCode = code.outputFiles[0].text;
-    //} else {
-     //   const minifiedCode = await jsMinify(code.outputFiles[0].text, {
-     //       module: true,
-     //       output: {
-     //           comments: false
-     //       }
-      //  });
+    /* } else {
+        const minifiedCode = await jsMinify(code.outputFiles[0].text, {
+            module: true,
+            output: {
+                comments: false
+            }
+        });
     
         console.log('✅ Worker minified successfuly!');
     
@@ -101,7 +102,7 @@ async function buildWorker() {
         console.log('✅ Worker obfuscated successfuly!');
         finalCode = obfuscationResult.getObfuscatedCode();
     }
-
+*/
     const worker = `// @ts-nocheck\n${finalCode}`;
     mkdirSync(DIST_PATH, { recursive: true });
     writeFileSync('./dist/worker.js', worker, 'utf8');
