@@ -42,11 +42,11 @@ async function processHtmlPages() {
                 .replaceAll('__SCRIPT__', scriptCode);
         }
 
-        const encodedHtml = Buffer.from(finalHtml, 'utf8').toString('base64');
-        result[dir] = JSON.stringify(encodedHtml);
+        // 改为直接明文（已 JSON 转义）
+        result[dir] = JSON.stringify(finalHtml);
     }
 
-    console.log(`${success} Assets bundled successfuly!`);
+    console.log(`${success} Assets bundled successfully!`);
     return result;
 }
 
@@ -73,7 +73,7 @@ async function buildWorker() {
         }
     });
 
-    console.log(`${success} Worker built successfuly!`);
+    console.log(`${success} Worker built successfully!`);
 
     // 直接使用 esbuild 输出代码，无压缩、无混淆
     const finalCode = code.outputFiles[0].text;
