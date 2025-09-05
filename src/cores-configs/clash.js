@@ -56,19 +56,21 @@ async function buildClashDNS(isChain, isWarp) {
     routingRules
         .filter(({ rule, ruleProvider }) => rule && ruleProvider?.geosite)
         .forEach(({ type, dns, ruleProvider }) => {
-            if (type === 'DIRECT') {
-                dnsObject["nameserver-policy"][`rule-set:${ruleProvider.geosite}`] = dns;
-            } else {
+            if (type === "REJECT") {
                 if (!dnsObject["hosts"]) dnsObject["hosts"] = {};
                 dnsObject["hosts"][`rule-set:${ruleProvider.geosite}`] = "127.0.0.1";
+                dnsObject["nameserver-policy"][`rule-set:${ruleProvider.geosite}`] = ["rcode://success"];
+            } else {
+                dnsObject["nameserver-policy"][`rule-set:${ruleProvider.geosite}`] = dns;
             }
         });
 
     const isFakeDNS = (settings.VLTRFakeDNS && !isWarp) || (settings.warpFakeDNS && isWarp);
     if (isFakeDNS) Object.assign(dnsObject, {
         "enhanced-mode": "fake-ip",
-        "fake-ip-range": "198.18.0.1/16",
-        "fake-ip-filter": ["*", "+.lan", "+.local"]
+        "fake-ip-range": "192.18.0.0/15",
+        "fake-ip-filter-mode": "blacklist",
+        "fake-ip-filter": ["*", "RULE-SET:Fake-IP-Filter"]
     });
 
     return dnsObject;
@@ -137,7 +139,8 @@ function buildClashRoutingRules(isWarp) {
     });
 
     let rules = [];
-
+    rules.push(`DST-PORT,53, 🧊-OUT`);
+  
     if (settings.bypassLAN) rules.push(`GEOIP,lan,DIRECT,no-resolve`);
 
     function addRoutingRule(geosites, geoips, domains, ips, type) {
@@ -150,23 +153,58 @@ function buildClashRoutingRules(isWarp) {
             rules.push(`${ipType},${ip}${cidr},${type},no-resolve`);
         });
 
-        if (geoips) geoips.forEach(geoip => rules.push(`RULE-SET,${geoip},${type}`));
+        if (geoips) geoips.forEach(geoip => rules.push(`RULE-SET,${geoip},${type},no-resolve`));
     }
 
     if (isWarp && settings.blockUDP443) rules.push("AND,((NETWORK,udp),(DST-PORT,443)),REJECT");
     if (!isWarp) rules.push("NETWORK,udp,REJECT");
 
-    for (const [type, rule] of groupedRules) {
-        const { domain, ip, geosite, geoip } = rule;
-
-        if (domain.length) addRoutingRule(null, null, domain, null, type);
-        if (geosite.length) addRoutingRule(geosite, null, null, null, type);
-        if (ip.length) addRoutingRule(null, null, null, ip, type);
-        if (geoip.length) addRoutingRule(null, geoip, null, null, type);
+    rules = [
+    ...rules.filter(rule => !rule.includes('-cidr')),
+    ...rules.filter(rule => rule.includes('-cidr'))
+  ];
+  rules.push("DOMAIN-SUFFIX,googleapis.cn," + globalThis.selector);
+  rules.push("DOMAIN-REGEX,^r+[0-9]+(---|\.)sn-(2x3|ni5|j5o)\w{5}\.xn--ngstr-lra8j\.com$," + globalThis.selector);
+  const newRules = [];
+  const subRuleSet = [];
+  const ruleSuffix = settings.chainName;
+  
+  for (const rule of rules) {
+    const parts = rule.split(",");
+  
+    const isRuleSet = parts[0] === "RULE-SET";
+    const hasRuleSuffix = parts[2] && parts[2].startsWith(ruleSuffix);
+  
+    if (isRuleSet && hasRuleSuffix) {
+      const ruleName = parts[1];
+      const hasNoResolve = parts.includes("no-resolve");
+      subRuleSet.push(
+        hasNoResolve
+          ? `(RULE-SET,${ruleName},no-resolve)`
+          : `(RULE-SET,${ruleName})`
+      );
+    } else {
+      newRules.push(rule);
     }
-
-    rules.push("MATCH,✅ Selector");
-    return { rules, ruleProviders };
+  }
+  
+  // 添加 SUB-RULE
+  if (subRuleSet.length > 0) {
+    const subRule = `SUB-RULE,(OR,(${subRuleSet.join(",")})),${ruleSuffix}`;
+    newRules.push(subRule);
+  }
+  
+  rules = newRules;
+  rules.push("MATCH," + globalThis.selector);
+  rules.push("MATCH,REJECT");
+  let subrules = {};
+  subrules[ruleSuffix] = [
+    `AND,((DST-PORT,80/443),(NETWORK,TCP)), ${settings.outProxyParams.protocol === "http" ? settings.panelVersion : "DIRECT"}`,
+    "AND,((NETWORK,UDP)), DIRECT",
+    settings.outProxyParams.protocol === "http" ? `MATCH, ${settings.panelVersion}` : `MATCH, DIRECT`,
+    "MATCH, REJECT"
+  ];
+  return { rules, subrules, ruleProviders };
 }
 
 function buildClashVLOutbound(remark, address, port, host, sni, allowInsecure) {
