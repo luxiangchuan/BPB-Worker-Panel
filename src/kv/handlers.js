@@ -58,6 +58,16 @@ export async function updateDataset(request, env) {
 
         return dohHost;
     }
+    
+    const getWarpAt = (value, index) =>
+    Array.isArray(value) && value.length > index ? [value[index]] : [];
+    const warpEndpoints = populateField(
+    "warpEndpoints",
+    ["engage.cloudflareclient.com:2408"]
+    );
+    const warpEndpoint = getWarpAt(warpEndpoints, 0);
+    const warpEndpointsCONFIG = getWarpAt(warpEndpoints, 1);
+    const warpEndpointsRoveProxies = getWarpAt(warpEndpoints, 2);
 
     const settings = {
         remoteDNS,
@@ -107,7 +117,10 @@ export async function updateDataset(request, env) {
         customBypassRules: populateField('customBypassRules', []),
         customBlockRules: populateField('customBlockRules', []),
         customBypassSanctionRules: populateField('customBypassSanctionRules', []),
-        warpEndpoints: populateField('warpEndpoints', ['engage.cloudflareclient.com:2408']),
+        warpEndpoint,
+        warpEndpoints,
+        warpEndpointsCONFIG,
+        warpEndpointsRoveProxies,
         warpFakeDNS: populateField('warpFakeDNS', false),
         warpEnableIPv6: populateField('warpEnableIPv6', true),
         bestWarpInterval: populateField('bestWarpInterval', 30),
@@ -130,7 +143,8 @@ export async function updateDataset(request, env) {
         amneziaNoiseCount: populateField('amneziaNoiseCount', 5),
         amneziaNoiseSizeMin: populateField('amneziaNoiseSizeMin', 50),
         amneziaNoiseSizeMax: populateField('amneziaNoiseSizeMax', 100),
-        panelVersion: globalThis.panelVersion
+        panelVersion: globalThis.panelVersion,
+        chainName: globalThis.chainName
     };
 
     try {
