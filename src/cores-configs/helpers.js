@@ -4,20 +4,32 @@ export function isDomain(address) {
     return domainPattern.test(address);
 }
 
-export async function resolveDNS(domain, onlyIPv4 = false) {
+async function resolveDNS(domains, onlyIPv4 = false) {
+  if (!Array.isArray(domains)) {
+    domains = [domains];
+  }
+
+  const tasks = domains.map(async (domain) => {
     const dohBaseURL = `${globalThis.dohURL}?name=${encodeURIComponent(domain)}`;
     const dohURLs = {
-        ipv4: `${dohBaseURL}&type=A`,
-        ipv6: `${dohBaseURL}&type=AAAA`,
+      ipv4: `${dohBaseURL}&type=A`,
+      ipv6: `${dohBaseURL}&type=AAAA`
     };
 
     try {
-        const ipv4 = await fetchDNSRecords(dohURLs.ipv4, 1);
-        const ipv6 = onlyIPv4 ? [] : await fetchDNSRecords(dohURLs.ipv6, 28);
-        return { ipv4, ipv6 };
+      const [ipv4, ipv6] = await Promise.all([
+        fetchDNSRecords(dohURLs.ipv4, 1),
+        onlyIPv4 ? Promise.resolve([]) : fetchDNSRecords(dohURLs.ipv6, 28)
+      ]);
+
+      return [domain, { ipv4, ipv6 }];
     } catch (error) {
-        throw new Error(`Error resolving DNS for ${domain}: ${error.message}`);
+      return [domain, { error: error.message }];
     }
+  });
+
+  const results = await Promise.all(tasks);
+  return Object.fromEntries(results);
 }
 
 async function fetchDNSRecords(url, recordType) {
@@ -36,16 +48,17 @@ async function fetchDNSRecords(url, recordType) {
 
 export async function getConfigAddresses(isFragment) {
     const { settings, hostName } = globalThis;
-    const resolved = await resolveDNS(hostName, !settings.VLTRenableIPv6);
+    const resolved = await resolveDNS(settings.customCdnAddrs, !settings.VLTRenableIPv6);
     const addrs = [
-        hostName,
-        'www.speedtest.net',
+        //hostName,
+        //'www.speedtest.net',
         ...resolved.ipv4,
         ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...settings.cleanIPs
     ];
 
-    return isFragment ? addrs : [...addrs, ...settings.customCdnAddrs];
+    //return isFragment ? addrs : [...addrs, ...settings.customCdnAddrs];
+    return addrs;
 }
 
 export function extractWireguardParams(warpConfigs, isWoW) {
@@ -78,15 +91,15 @@ export function randomUpperCase(str) {
     return result;
 }
 
-export function getRandomString(lengthMin, lengthMax) {
-    let result = '';
+export function getRandomString(lengthMin, lengthMax = 36) {
+    /*let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const charactersLength = characters.length;
     const length = Math.floor(Math.random() * (lengthMax - lengthMin + 1)) + lengthMin;
     for (let i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
+    }*/
+    return return crypto.randomUUID();
 }
 
 export function generateWsPath(protocol) {
